@@ -1,0 +1,32 @@
+name: Daily Stock Screener Bot
+
+on:
+  schedule:
+    # Runs at 10:00 AM Eastern Time (America/New_York) Monday through Friday
+    - cron: '0 10 * * 1-5'
+      timezone: 'America/New_York'
+  workflow_dispatch: # Allows manual run anytime via GitHub UI
+
+jobs:
+  run-screener:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install yfinance pandas requests
+
+      - name: Run Stock Screener Script
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python screener.py

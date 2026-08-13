@@ -42,7 +42,6 @@ KNOWN_STOCKS = [
     'CELH', 'NFLX', 'DHI', 'DELL'
 ]
 
-# Ensure uniqueness
 KNOWN_STOCKS = list(dict.fromkeys(KNOWN_STOCKS))
 
 def run_screener():
@@ -53,7 +52,6 @@ def run_screener():
 
     for ticker in KNOWN_STOCKS:
         try:
-            # MultiIndex extraction or single DataFrame extraction
             if isinstance(raw_data.columns, pd.MultiIndex):
                 if ticker not in raw_data.columns.levels[1]:
                     continue
@@ -79,20 +77,17 @@ def run_screener():
             latest_low = float(low_ser.iloc[-1])
             latest_vol = float(vol_ser.iloc[-1])
 
-            # -------------------------------------------------------------
-            # CONDITION 1: Price > 20
-            # -------------------------------------------------------------
+            # Condition 1: Price > 20
             if latest_close <= 20:
                 continue
 
-            # 50-day Moving Average (Close & Volume)
             sma50_close = close_ser.rolling(window=50).mean().iloc[-1]
             sma50_vol = vol_ser.rolling(window=50).mean().iloc[-1]
 
             if pd.isna(sma50_close) or pd.isna(sma50_vol) or sma50_vol == 0:
                 continue
 
-            # ATR(14) calculation (Wilder True Range)
+            # ATR(14)
             tr = pd.concat([
                 high_ser - low_ser,
                 (high_ser - close_ser.shift(1)).abs(),
@@ -104,26 +99,17 @@ def run_screener():
             if pd.isna(atr14) or atr14 == 0:
                 continue
 
-            # -------------------------------------------------------------
-            # CONDITION 2: LoD is less than 70
-            # Pine Formula: lod_dist = 100 * (close - low) / myAtr
-            # -------------------------------------------------------------
+            # Condition 2: LoD < 70
             lod_dist = 100 * (latest_close - latest_low) / atr14
             if lod_dist >= 70:
                 continue
 
-            # -------------------------------------------------------------
-            # CONDITION 3: ATR extension from ma50 less than 4
-            # Pine Formula: atrMultiple = (close - sma50) / myAtr
-            # -------------------------------------------------------------
+            # Condition 3: ATR extension < 4
             atr_extension = (latest_close - sma50_close) / atr14
             if atr_extension >= 4.0:
                 continue
 
-            # -------------------------------------------------------------
-            # CONDITION 4: Relative Volume is 25% (>= 25%)
-            # Pine Formula: relVol = volume / ma50_vol * 100
-            # -------------------------------------------------------------
+            # Condition 4: Rel Vol >= 25%
             rel_vol = (latest_vol / sma50_vol) * 100
             if rel_vol < 25.0:
                 continue
@@ -153,33 +139,52 @@ def send_telegram_notification(matches):
     today_str = datetime.datetime.now().strftime("%Y-%m-%d")
 
     if not matches:
-        text = f"📊 *Stock Screener Alert ({today_str})*\n\nNo tickers fulfilled all criteria today."
+        messages = [f"📊 *Stock Screener Alert ({today_str})*\n\nNo tickers fulfilled all criteria today."]
     else:
-        text = f"📊 *Stock Screener Results ({today_str})*\n"
-        text += f"Found *{len(matches)}* stock(s) fulfilling all criteria:\n"
-        text += "• Price > $20\n• LoD < 70%\n• ATR Extension < 4x\n• Rel Vol ≥ 25%\n"
-        text += "----------------------------------------\n\n"
+        header = (
+            f"📊 *Stock Screener Results ({today_str})*\n"
+            f"Found *{len(matches)}* stock(s) fulfilling all criteria:\n"
+            f"• Price > $20\n• LoD < 70%\n• ATR Extension < 4x\n• Rel Vol ≥ 25%\n"
+            f"----------------------------------------\n\n"
+        )
 
+        stock_lines = []
         for stock in sorted(matches, key=lambda x: x['ticker']):
-            text += (
+            line = (
                 f"• *{stock['ticker']}* — Price: *${stock['price']}*\n"
                 f"   └ LoD: `{stock['lod_dist']}%` | ATR Ext: `{stock['atr_extension']}x` | Rel Vol: `{stock['rel_vol']}%`\n\n"
             )
+            stock_lines.append(line)
+
+        # Chunk messages to stay safely under Telegram's 4096 character limit
+        messages = []
+        current_msg = header
+
+        for line in stock_lines:
+            if len(current_msg) + len(line) > 3800:
+                messages.append(current_msg)
+                current_msg = line
+            else:
+                current_msg += line
+
+        if current_msg:
+            messages.append(current_msg)
 
     telegram_url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-    payload = {
-        "chat_id": chat_id,
-        "text": text,
-        "parse_mode": "Markdown"
-    }
 
-    response = requests.post(telegram_url, json=payload, timeout=20)
-    
-    if response.status_code == 200:
-        print(f"Successfully sent notification to Telegram for {len(matches)} stocks.")
-    else:
-        print(f"Failed to send Telegram message. Response {response.status_code}: {response.text}")
-        sys.exit(1)
+    for idx, msg_text in enumerate(messages):
+        payload = {
+            "chat_id": chat_id,
+            "text": msg_text,
+            "parse_mode": "Markdown"
+        }
+        response = requests.post(telegram_url, json=payload, timeout=20)
+        
+        if response.status_code != 200:
+            print(f"Failed to send Telegram message part {idx + 1}/{len(messages)}. Response {response.status_code}: {response.text}")
+            sys.exit(1)
+
+    print(f"Successfully sent {len(messages)} message(s) to Telegram for {len(matches)} matching stock(s).")
 
 
 if __name__ == "__main__":

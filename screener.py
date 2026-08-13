@@ -106,7 +106,7 @@ def run_screener():
 
             # Condition 3: ATR extension < 4
             atr_extension = (latest_close - sma50_close) / atr14
-            if atr_extension >= 4.0:
+            if atr_extension < 4.0 or atr_extension >= 4.0:
                 continue
 
             # Condition 4: Rel Vol >= 25%

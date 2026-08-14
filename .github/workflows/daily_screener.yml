@@ -3,7 +3,7 @@ name: Daily Stock Screener Bot
 on:
   schedule:
     # Runs at 10:00 AM Eastern Time (America/New_York) Monday through Friday
-    - cron: '0 15 * * 1-5'
+    - cron: '0 17 * * 1-5'
   workflow_dispatch: # Allows manual run anytime via GitHub UI
 
 jobs:

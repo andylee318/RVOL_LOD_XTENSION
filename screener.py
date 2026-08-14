@@ -99,14 +99,14 @@ def run_screener():
             if pd.isna(atr14) or atr14 == 0:
                 continue
 
-            # Condition 2: LoD < 70
+            # Condition 2: LoD <= 70
             lod_dist = 100 * (latest_close - latest_low) / atr14
-            if lod_dist >= 70:
+            if lod_dist > 70:
                 continue
 
-            # Condition 3: ATR extension < 4
+            # Condition 3: ATR extension <= 4
             atr_extension = (latest_close - sma50_close) / atr14
-            if atr_extension < 0 or atr_extension >= 4.0:
+            if atr_extension < 0 or atr_extension > 4.0:
                 continue
 
             # Condition 4: Rel Vol >= 25%

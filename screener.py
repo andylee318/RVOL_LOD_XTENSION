@@ -7,7 +7,7 @@ import requests
 
 # Cleaned Known Stocks list extracted directly from Streamlit code
 KNOWN_STOCKS = [
-    'PALL', 'PLTM', 'IHF', 'ESTC', 'PRU', 'RGEN', 'UBS', 'TRV', 'WEN', 'OKLO', 'IBB', 'Q', 'OUST', 'VPG', 'WOLF', 'NOK', 'HSBC', 'DLTR', 'SKHY', 'RDDT', 'RL', 'CROX', 'LEVI', 'FOTO', 'GNRC', 'KLIC', 'IWM', 'HBMX', 'PWR', 'EUV', 'GRID', 'MAGS', 'SPCX', 'IBM', 'ELV', 'OSCR', 'QNT', 'HYDR', 'ALGM', 'LGN', 'IESC', 'AEHR', 'ACLS', 'MKSI', 'SMTC', 'AMKR', 
+    'PALL', 'PLTM', 'IHF', 'ESTC', 'PRU', 'RGEN', 'UBS', 'TRV', 'WEN', 'OKLO', 'IBB', 'Q', 'OUST', 'VPG', 'WOLF', 'NOK', 'HSBC', 'DLTR', 'SKHY', 'RDDT', 'RL', 'CROX', 'LEVI', 'FOTO', 'GNRC', 'KLIC', '[...]
     'LSCC', 'DIOD', 'POWI', 'AA', 'ABBV', 'ALAB', 'AMGN', 'APO', 'BOTZ', 'CRCL', 'CRWV', 'D', 'DRAM', 'DUK', 'EEM', 'EWJ', 'EWY', 'EXC', 'FIGR', 
     'GEV', 'GILD', 'GXC', 'JEF', 'KMI', 'KRMN', 'LIN', 'MNST', 'NASA', 'NEM', 'NTR', 'OR', 
     'OWL', 'QQQ', 'RNG', 'RKT', 'SCCO', 'SHLD', 'SO', 'SOLS', 'SPMO', 'SPY', 'SPHB', 'TSEM', 'UNP', 'VTV', 
@@ -44,9 +44,11 @@ KNOWN_STOCKS = [
 
 KNOWN_STOCKS = list(dict.fromkeys(KNOWN_STOCKS))
 
+
 def run_screener():
     print(f"Downloading historical data for {len(KNOWN_STOCKS)} stocks...")
-    raw_data = yf.download(KNOWN_STOCKS, period="6mo", interval="1d", auto_adjust=True, progress=False)
+    # Increase period to 1 year so SMA200 and 20-day ADR can be calculated
+    raw_data = yf.download(KNOWN_STOCKS, period="1y", interval="1d", auto_adjust=True, progress=False)
 
     matching_stocks = []
 
@@ -65,7 +67,8 @@ def run_screener():
             else:
                 df = raw_data[['Open', 'High', 'Low', 'Close', 'Volume']].dropna()
 
-            if len(df) < 50:
+            # Need enough data to compute indicators (200 for SMA200, 20 for ADR)
+            if len(df) < 200:
                 continue
 
             close_ser = df['Close']
@@ -114,12 +117,30 @@ def run_screener():
             if rel_vol < 25.0:
                 continue
 
+            # New Condition 5: Price above SMA200
+            sma200 = close_ser.rolling(window=200).mean().iloc[-1]
+            if pd.isna(sma200):
+                continue
+            if latest_close <= sma200:
+                continue
+
+            # New Condition 6: ADR(20) percent >= 2.45
+            # adrPercent = 100 * (ta.sma(high / low, 20) - 1)
+            high_low_ratio_sma20 = (high_ser / low_ser).rolling(window=20).mean().iloc[-1]
+            if pd.isna(high_low_ratio_sma20):
+                continue
+            adrPercent = 100 * (high_low_ratio_sma20 - 1)
+            cond1 = adrPercent >= 2.45
+            if not cond1:
+                continue
+
             matching_stocks.append({
                 'ticker': ticker,
                 'price': round(latest_close, 2),
                 'lod_dist': round(lod_dist, 1),
                 'atr_extension': round(atr_extension, 2),
-                'rel_vol': round(rel_vol, 1)
+                'rel_vol': round(rel_vol, 1),
+                'adr_percent': round(adrPercent, 2)
             })
 
         except Exception:
@@ -144,7 +165,7 @@ def send_telegram_notification(matches):
         header = (
             f"📊 *Stock Screener Results ({today_str})*\n"
             f"Found *{len(matches)}* stock(s) fulfilling all criteria:\n"
-            f"• Price > $20\n• LoD < 70%\n• ATR Extension < 4x\n• Rel Vol ≥ 25%\n"
+            f"• Price > $20\n• LoD < 70%\n• ATR Extension < 4x\n• Rel Vol ≥ 25%\n• Price above SMA200\n• ADR(20) ≥ 2.45%\n"
             f"----------------------------------------\n\n"
         )
 
@@ -152,7 +173,7 @@ def send_telegram_notification(matches):
         for stock in sorted(matches, key=lambda x: x['ticker']):
             line = (
                 f"• *{stock['ticker']}* — Price: *${stock['price']}*\n"
-                f"   └ LoD: `{stock['lod_dist']}%` | ATR Ext: `{stock['atr_extension']}x` | Rel Vol: `{stock['rel_vol']}%`\n\n"
+                f"   └ LoD: `{stock['lod_dist']}%` | ATR Ext: `{stock['atr_extension']}x` | Rel Vol: `{stock['rel_vol']}%` | ADR(20): `{stock['adr_percent']}%`\n\n"
             )
             stock_lines.append(line)
 

@@ -165,15 +165,15 @@ def send_telegram_notification(matches):
         header = (
             f"📊 *Stock Screener Results ({today_str})*\n"
             f"Found *{len(matches)}* stock(s) fulfilling all criteria:\n"
-            f"• Price > $20\n• LoD < 70%\n• ATR Extension < 4x\n• Rel Vol ≥ 25%\n• Price above SMA200\n• ADR(20) ≥ 2.45%\n"
+            f"• Price > $20\n• RVol ≥ 25%\n• LoD < 70%\n• ATR Extension < 4x\n• Price above SMA200\n• ADR ≥ 2.45%\n"
             f"----------------------------------------\n\n"
         )
 
         stock_lines = []
         for stock in sorted(matches, key=lambda x: x['ticker']):
             line = (
-                f"• *{stock['ticker']}* — Price: *${stock['price']}*\n"
-                f"   └ LoD: `{stock['lod_dist']}%` | ATR Ext: `{stock['atr_extension']}x` | Rel Vol: `{stock['rel_vol']}%` | ADR(20): `{stock['adr_percent']}%`\n\n"
+                f"• *{stock['ticker']}*\n"
+                f"   └ RVol: `{stock['rel_vol']}%` | LoD: `{stock['lod_dist']}%` | ATR Ext: `{stock['atr_extension']}x` | ADR: `{stock['adr_percent']}%`\n\n"
             )
             stock_lines.append(line)
 

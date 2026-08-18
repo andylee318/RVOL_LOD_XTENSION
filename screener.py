@@ -164,8 +164,8 @@ def send_telegram_notification(matches):
     else:
         header = (
             f"📊 *Stock Screener Results ({today_str})*\n"
-            f"Found *{len(matches)}* stock(s) fulfilling all criteria:\n"
-            f"• Price > $20\n• RVol ≥ 25%\n• LoD < 70%\n• ATR Extension < 4x\n• Price above SMA200\n• ADR ≥ 2.45%\n"
+            f"*{len(matches)}* stocks:\n"
+            f"• RVol ≥ 25%\n• LoD < 70%\n• ATR Extension < 4x\n"
             f"----------------------------------------\n\n"
         )
 

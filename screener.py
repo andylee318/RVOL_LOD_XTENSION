@@ -163,7 +163,7 @@ def send_telegram_notification(matches):
         messages = [f"📊 *Stock Screener Alert ({today_str})*\n\nNo tickers fulfilled all criteria today."]
     else:
         header = (
-            f"📊 *Stock Screener Results ({today_str})*\n"
+            f"📊 *({today_str})*\n"
             f"*{len(matches)}* stocks:\n"
             f"• RVol ≥ 25%\n• LoD < 70%\n• ATR Extension < 4x\n"
             f"----------------------------------------\n\n"

@@ -160,7 +160,7 @@ def send_telegram_notification(matches):
     today_str = datetime.datetime.now().strftime("%Y-%m-%d")
 
     if not matches:
-        messages = [f"📊 *Stock Screener Alert ({today_str})*\n\nNo tickers fulfilled all criteria today."]
+        messages = [f"📊 *Stock Screener Alert {today_str}*\n\nNo tickers fulfilled all criteria today."]
     else:
         header = (
             f"📊 *({today_str})*\n"
@@ -173,7 +173,7 @@ def send_telegram_notification(matches):
         for stock in sorted(matches, key=lambda x: x['ticker']):
             line = (
                 f"• *{stock['ticker']}*\n"
-                f"   └ RVol: `{stock['rel_vol']}%` | LoD: `{stock['lod_dist']}%` | ATR Ext: `{stock['atr_extension']}x` | ADR: `{stock['adr_percent']}%`\n\n"
+                f"   └ RVol: `{stock['rel_vol']}%` | LoD: `{stock['lod_dist']}%` | ATR Ext: `{stock['atr_extension']}x`\n\n"
             )
             stock_lines.append(line)
 

@@ -96,7 +96,7 @@ def run_screener():
                 (high_ser - close_ser.shift(1)).abs(),
                 (low_ser - close_ser.shift(1)).abs()
             ], axis=1).max(axis=1)
-            
+
             atr14 = tr.rolling(window=14).mean().iloc[-1]
 
             if pd.isna(atr14) or atr14 == 0:
@@ -169,8 +169,11 @@ def send_telegram_notification(matches):
             f"----------------------------------------\n\n"
         )
 
+        # Display order (this exact order is reused for the ticker summary at the bottom)
+        ordered_matches = sorted(matches, key=lambda x: x['ticker'])
+
         stock_lines = []
-        for stock in sorted(matches, key=lambda x: x['ticker']):
+        for stock in ordered_matches:
             line = (
                 f"• *{stock['ticker']}*\n"
                 f"   └ RVol: `{stock['rel_vol']}%` | LoD: `{stock['lod_dist']}%` | ATR Ext: `{stock['atr_extension']}x`\n\n"
@@ -191,6 +194,45 @@ def send_telegram_notification(matches):
         if current_msg:
             messages.append(current_msg)
 
+        # Ticker summary appended at the very bottom, in display sequence
+        ticker_list = ", ".join(stock['ticker'] for stock in ordered_matches)
+        summary_block = (
+            f"----------------------------------------\n"
+            f"*Tickers ({len(ordered_matches)}):*\n"
+            f"`{ticker_list}`"
+        )
+
+        # Append to the last message if it fits; otherwise send as its own message.
+        # If the ticker list alone is too long, split it across extra messages.
+        if len(summary_block) <= 3800:
+            if messages and len(messages[-1]) + len("\n") + len(summary_block) <= 3800:
+                messages[-1] = messages[-1] + "\n" + summary_block
+            else:
+                messages.append(summary_block)
+        else:
+            tickers = [stock['ticker'] for stock in ordered_matches]
+            chunks = []
+            current_chunk = []
+            current_len = 0
+            for t in tickers:
+                add_len = len(t) + 2  # ", "
+                if current_chunk and current_len + add_len > 3500:
+                    chunks.append(current_chunk)
+                    current_chunk = [t]
+                    current_len = len(t)
+                else:
+                    current_chunk.append(t)
+                    current_len += add_len
+            if current_chunk:
+                chunks.append(current_chunk)
+
+            for i, chunk in enumerate(chunks):
+                part_header = (
+                    f"----------------------------------------\n"
+                    f"*Tickers ({len(ordered_matches)}) part {i + 1}/{len(chunks)}:*\n"
+                )
+                messages.append(part_header + "`" + ", ".join(chunk) + "`")
+
     telegram_url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
 
     for idx, msg_text in enumerate(messages):
@@ -200,7 +242,7 @@ def send_telegram_notification(matches):
             "parse_mode": "Markdown"
         }
         response = requests.post(telegram_url, json=payload, timeout=20)
-        
+
         if response.status_code != 200:
             print(f"Failed to send Telegram message part {idx + 1}/{len(messages)}. Response {response.status_code}: {response.text}")
             sys.exit(1)

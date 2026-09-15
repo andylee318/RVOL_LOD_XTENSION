@@ -164,7 +164,7 @@ def send_telegram_notification(matches):
     else:
         header = (
             f"📊 *{today_str}*\n"
-            f"*{len(matches)}* stocks:\n"
+            #f"*{len(matches)}* stocks:\n"
             f"• RVol ≥ 25%\n• LoD < 70%\n• ATR Extension < 4x\n"
             f"----------------------------------------\n\n"
         )
@@ -183,8 +183,8 @@ def send_telegram_notification(matches):
         # Ticker summary placed at the very top, in display sequence
         ticker_list = ", ".join(stock['ticker'] for stock in ordered_matches)
         summary_block = (
-            f"*Tickers ({len(ordered_matches)}):*\n"
-            f"`{ticker_list}`\n"
+            f"*🧾ALL TICKERS ({len(ordered_matches)}):*\n"
+            f"`{ticker_list}`\n\n"
             f"----------------------------------------\n\n"
         )
 

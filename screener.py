@@ -169,7 +169,7 @@ def send_telegram_notification(matches):
             f"----------------------------------------\n\n"
         )
 
-        # Display order (this exact order is reused for the ticker summary at the bottom)
+        # Display order (this exact order is reused for the ticker summary at the top)
         ordered_matches = sorted(matches, key=lambda x: x['ticker'])
 
         stock_lines = []
@@ -180,36 +180,27 @@ def send_telegram_notification(matches):
             )
             stock_lines.append(line)
 
-        # Chunk messages to stay safely under Telegram's 4096 character limit
-        messages = []
-        current_msg = header
-
-        for line in stock_lines:
-            if len(current_msg) + len(line) > 3800:
-                messages.append(current_msg)
-                current_msg = line
-            else:
-                current_msg += line
-
-        if current_msg:
-            messages.append(current_msg)
-
-        # Ticker summary appended at the very bottom, in display sequence
+        # Ticker summary placed at the very top, in display sequence
         ticker_list = ", ".join(stock['ticker'] for stock in ordered_matches)
         summary_block = (
-            f"----------------------------------------\n"
             f"*Tickers ({len(ordered_matches)}):*\n"
-            f"`{ticker_list}`"
+            f"`{ticker_list}`\n"
+            f"----------------------------------------\n\n"
         )
 
-        # Append to the last message if it fits; otherwise send as its own message.
-        # If the ticker list alone is too long, split it across extra messages.
-        if len(summary_block) <= 3800:
-            if messages and len(messages[-1]) + len("\n") + len(summary_block) <= 3800:
-                messages[-1] = messages[-1] + "\n" + summary_block
-            else:
-                messages.append(summary_block)
+        # Chunk messages to stay safely under Telegram's 4096 character limit
+        messages = []
+
+        top_block = header + summary_block
+        if len(top_block) <= 3800:
+            # Header + full ticker list fit together as the first message
+            current_msg = top_block
         else:
+            # Ticker list too long to sit with the header — send the header,
+            # then the ticker list split across as many messages as needed,
+            # before any of the per-stock detail lines.
+            messages.append(header)
+
             tickers = [stock['ticker'] for stock in ordered_matches]
             chunks = []
             current_chunk = []
@@ -228,10 +219,22 @@ def send_telegram_notification(matches):
 
             for i, chunk in enumerate(chunks):
                 part_header = (
-                    f"----------------------------------------\n"
                     f"*Tickers ({len(ordered_matches)}) part {i + 1}/{len(chunks)}:*\n"
                 )
                 messages.append(part_header + "`" + ", ".join(chunk) + "`")
+
+            current_msg = ""
+
+        for line in stock_lines:
+            if len(current_msg) + len(line) > 3800:
+                if current_msg:
+                    messages.append(current_msg)
+                current_msg = line
+            else:
+                current_msg += line
+
+        if current_msg:
+            messages.append(current_msg)
 
     telegram_url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
 

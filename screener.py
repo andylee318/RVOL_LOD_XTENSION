@@ -1,6 +1,7 @@
 import os
 import sys
 import datetime
+from zoneinfo import ZoneInfo
 import pandas as pd
 import yfinance as yf
 import requests
@@ -44,7 +45,19 @@ KNOWN_STOCKS = [
 
 KNOWN_STOCKS = list(dict.fromkeys(KNOWN_STOCKS))
 
+MARKET_TZ = ZoneInfo("America/New_York")
 
+
+def is_market_open_now() -> bool:
+    """True on NYSE trading hours (weekday 9:30am-4:00pm ET).
+    Does NOT account for market holidays."""
+    now_et = datetime.datetime.now(MARKET_TZ)
+    if now_et.weekday() >= 5:  # Sat=5, Sun=6
+        return False
+    open_t = now_et.replace(hour=9, minute=30, second=0, microsecond=0)
+    close_t = now_et.replace(hour=16, minute=0, second=0, microsecond=0)
+    return open_t <= now_et <= close_t
+    
 def run_screener():
     print(f"Downloading historical data for {len(KNOWN_STOCKS)} stocks...")
     # Increase period to 1 year so SMA200 and 20-day ADR can be calculated
@@ -254,5 +267,9 @@ def send_telegram_notification(matches):
 
 
 if __name__ == "__main__":
+    if not is_market_open_now():
+        print("Market closed right now (ET) — skipping.")
+        sys.exit(0)
+
     results = run_screener()
     send_telegram_notification(results)

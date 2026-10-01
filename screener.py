@@ -189,7 +189,7 @@ def send_telegram_notification(matches):
         for stock in ordered_matches:
             line = (
                 f"• *{stock['ticker']}*\n"
-                f"   └ RVol: `{stock['rel_vol']}%` | LoD: `{stock['lod_dist']}%` | ATR Ext: `{stock['atr_extension']}x`\n\n"
+                f"   └ RVol: `{stock['rel_vol']}%` | ATR Ext: `{stock['atr_extension']}x` | LoD: `{stock['lod_dist']}%`\n\n"
             )
             stock_lines.append(line)
 

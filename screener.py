@@ -93,6 +93,8 @@ def run_screener():
             latest_close = float(close_ser.iloc[-1])
             latest_low = float(low_ser.iloc[-1])
             latest_vol = float(vol_ser.iloc[-1])
+            previous_close = float(close_ser.iloc[-2])
+            pct_change = ((latest_close - previous_close) / previous_close) * 100
 
             # Condition 1: Price > 20
             if latest_close <= 20:
@@ -151,6 +153,7 @@ def run_screener():
             matching_stocks.append({
                 'ticker': ticker,
                 'price': round(latest_close, 2),
+                'pct_change': round(pct_change, 2),
                 'lod_dist': round(lod_dist, 1),
                 'atr_extension': round(atr_extension, 2),
                 'rel_vol': round(rel_vol, 1),
@@ -189,7 +192,7 @@ def send_telegram_notification(matches):
         stock_lines = []
         for stock in ordered_matches:
             line = (
-                f"• *{stock['ticker']}*\n"
+                f"• *{stock['ticker']}* ({stock['pct_change']:+.2f}%)\n"
                 f"   └ RVol: `{stock['rel_vol']}%` | ATR Ext: `{stock['atr_extension']}x` | LoD: `{stock['lod_dist']}%`\n\n"
             )
             stock_lines.append(line)

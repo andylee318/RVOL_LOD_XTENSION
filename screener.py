@@ -182,7 +182,7 @@ def send_telegram_notification(matches):
         header = (
             f"📊 *{today_str}*\n"
             #f"*{len(matches)}* stocks:\n"
-            f"• RVol ≥ 25%\n• LoD < 70%\n• ATR Extension < 4x\n"
+            f"• RVol ≥ 25%\n• ATR Extension < 4x\n• LoD < 70%\n"
             f"----------------------------------------\n\n"
         )
 

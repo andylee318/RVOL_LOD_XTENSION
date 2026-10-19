@@ -48,6 +48,20 @@ KNOWN_STOCKS = list(dict.fromkeys(KNOWN_STOCKS))
 
 MARKET_TZ = ZoneInfo("America/New_York")
 
+def get_rvol_threshold() -> float:
+    """Pick the RVol threshold based on the time of day (ET).
+    Before 10:15 ET -> early run (lower threshold).
+    10:15 ET onward -> later run (higher threshold)."""
+    # Optional override for manual testing: RVOL_MIN=60 python screener.py
+    override = os.environ.get("RVOL_MIN")
+    if override:
+        return float(override)
+
+    now_et = datetime.datetime.now(MARKET_TZ)
+    minutes = now_et.hour * 60 + now_et.minute
+    cutoff = 10 * 60 + 15  # 10:15 ET, halfway between your two runs
+
+    return 25.0 if minutes < cutoff else 40.0   # adjust 40.0 to taste
 
 def is_market_open_now() -> bool:
     """True on NYSE trading hours (weekday 9:30am-4:00pm ET).
@@ -130,7 +144,7 @@ def run_screener():
 
             # Condition 4: Rel Vol >= 25%
             rel_vol = (latest_vol / sma50_vol) * 100
-            if rel_vol < 25.0:
+            if rel_vol < rvol_min:
                 continue
 
             # New Condition 5: Price above SMA200
@@ -182,7 +196,7 @@ def send_telegram_notification(matches):
         header = (
             f"📊 *{today_str}*\n"
             #f"*{len(matches)}* stocks:\n"
-            f"• RVol ≥ 25%\n• ATR Extension < 4x\n• LoD < 70%\n"
+            f"• RVol ≥ 25% or 35%\n• ATR Extension < 4x\n• LoD < 70%\n"
             f"----------------------------------------\n\n"
         )
 

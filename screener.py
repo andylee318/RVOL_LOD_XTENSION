@@ -73,7 +73,7 @@ def is_market_open_now() -> bool:
     close_t = now_et.replace(hour=16, minute=0, second=0, microsecond=0)
     return open_t <= now_et <= close_t
     
-def run_screener():
+def run_screener(rvol_min: float = 25.0):
     print(f"Downloading historical data for {len(KNOWN_STOCKS)} stocks...")
     # Increase period to 1 year so SMA200 and 20-day ADR can be calculated
     raw_data = yf.download(KNOWN_STOCKS, period="1y", interval="1d", auto_adjust=True, progress=False)

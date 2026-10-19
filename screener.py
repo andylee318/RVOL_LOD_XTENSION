@@ -289,5 +289,8 @@ if __name__ == "__main__":
         print("Market closed right now (ET) — skipping.")
         sys.exit(0)
 
-    results = run_screener()
-    send_telegram_notification(results)
+    rvol_min = get_rvol_threshold()
+    #print(f"Using RVol threshold: {rvol_min}%")
+
+    results = run_screener(rvol_min)
+    send_telegram_notification(results, rvol_min)

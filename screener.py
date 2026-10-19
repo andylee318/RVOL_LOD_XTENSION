@@ -293,4 +293,4 @@ if __name__ == "__main__":
     #print(f"Using RVol threshold: {rvol_min}%")
 
     results = run_screener(rvol_min)
-    send_telegram_notification(results, rvol_min)
+    send_telegram_notification(results)
